@@ -197,60 +197,6 @@ runs:
         }
       shell: pwsh
 
-    - name: Restore PIP packages cache
-      uses: actions/cache/restore@v4
-      id: cache
-      continue-on-error: true
-      with:
-        path: '~\AppData\Local\pip\Cache'
-        key: enricomi-publish-action-${{ runner.os }}-${{ runner.arch }}-pip-${{ steps.python.outputs.version }}-b0048519e3287ae9cfc634aeda40cbfe
-
-    - name: Create virtualenv
-      id: venv
-      continue-on-error: true
-      run: |
-        # Create virtualenv
-        Write-Output "::group::Create virtualenv"
-        try {
-          Write-Output "Python that creates venv: $env:PYTHON_BIN"
-
-          Write-Output "Creating virtual environment"
-          if ( -Not (Invoke-Expression -Command "& '$env:PYTHON_BIN' -m virtualenv enricomi-publish-action-venv" 2> $null) -And -Not (Invoke-Expression -Command "& '$env:PYTHON_BIN' -m venv enricomi-publish-action-venv" 2> $null) ) {
-            Write-Output "Looks like there is neither virtualenv nor venv package installed"
-            if ( -Not (Invoke-Expression -Command "& '$env:PYTHON_BIN' -m pip install --user virtualenv" 2> $null) ) {
-              Write-Output "Installing virtualenv package with PIP option '--user' failed, now trying without"
-              if ( -Not (Invoke-Expression -Command "& '$env:PYTHON_BIN' -m pip install virtualenv" 2> $null) ) {
-                Write-Output "::error::Installing virtualenv package failed"
-                Exit 1
-              }
-            }
-
-            if ( -Not (Invoke-Expression -Command "& '$env:PYTHON_BIN' -m virtualenv enricomi-publish-action-venv" 2> $null) ) {
-              Write-Output "::error::Cannot create venv after installing virtualenv package"
-              Exit 1
-            }
-          }
-
-          Write-Output "Finding Python interpreter in venv"
-          $PYTHON_VENV = enricomi-publish-action-venv\Scripts\python -c "import sys; print(sys.executable)"
-          Write-Output "Python in venv: $PYTHON_VENV"
-          "PYTHON_VENV=$PYTHON_VENV" | Out-File -FilePath $env:GITHUB_ENV -Append
-        } finally {
-          Write-Output "::endgroup::"
-        }
-      shell: pwsh
-
-    - name: Install Python dependencies
-      run: |
-        # Install Python dependencies
-        Write-Output "::group::Install Python dependencies"
-        try {
-          Invoke-Expression -Command "& '$env:PYTHON_VENV' -m pip install -r '$env:GITHUB_ACTION_PATH\..\python\requirements-$env:DEPENDENCIES_VERSION.txt'"
-        } finally {
-          Write-Output "::endgroup::"
-        }
-      shell: pwsh
-
     - name: Publish Test Results
       id: test-results
       run: |
@@ -307,14 +253,6 @@ runs:
         # not documented
         LOG_LEVEL: ${{ inputs.log_level }}
       shell: pwsh
-
-    - name: Save PIP packages cache
-      uses: actions/cache/save@v4
-      if: ( success() || failure() ) && ! steps.cache.outputs.cache-hit
-      continue-on-error: true
-      with:
-        path: '~\AppData\Local\pip\Cache'
-        key: ${{ steps.cache.outputs.cache-primary-key }}
 
 branding:
   icon: 'check-circle'
