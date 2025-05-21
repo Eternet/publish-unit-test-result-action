@@ -200,10 +200,9 @@ runs:
     - name: Publish Test Results
       id: test-results
       run: |
-        # Publish Test Results
         Write-Output "::group::Publish Test Results"
         try {
-          Invoke-Expression -Command "& '$env:PYTHON_VENV' '$env:GITHUB_ACTION_PATH\..\python\publish_test_results.py'"
+          Invoke-Expression -Command "& '$env:PYTHON_BIN' '$env:GITHUB_ACTION_PATH\..\python\publish_test_results.py'"
         } finally {
           Write-Output "::endgroup::"
         }
