@@ -8,6 +8,7 @@ on:
     tags:
       - '*'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: '10 9 * * *'
   workflow_dispatch:
@@ -15,6 +16,7 @@ permissions: {}
 
 jobs:
   dependencies:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: Test python/requirements.txt
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +37,7 @@ jobs:
         shell: bash
 
   test-mac:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "Test macOS"
     uses: "./.github/workflows/test-os.yml"
     with:
@@ -47,6 +50,7 @@ jobs:
         ]
 
   test-lnx:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "Test Ubuntu"
     uses: "./.github/workflows/test-os.yml"
     with:
@@ -58,6 +62,7 @@ jobs:
         ]
 
   test-win:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "Test Windows"
     uses: "./.github/workflows/test-os.yml"
     with:
@@ -69,10 +74,7 @@ jobs:
     name: "Publish"
     needs: [test-mac, test-lnx, test-win]
     # we run the action from this branch whenever we can (when it runs in our repo's context)
-    if: >
-      ! cancelled() &&
-      github.event.sender.login != 'dependabot[bot]' &&
-      ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository )
+    if: ${{ (! cancelled() && github.event.sender.login != 'dependabot[bot]' && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository )) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     uses: "./.github/workflows/publish.yml"
     permissions:
       checks: write
@@ -83,7 +85,7 @@ jobs:
     name: Configure Deployment
     needs: [test-mac, test-lnx, test-win]
     # do not build or deploy on forked repositories
-    if: github.repository_owner == 'EnricoMi'
+    if: ${{ (github.repository_owner == 'EnricoMi') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.action.outputs.image }}
@@ -121,7 +123,7 @@ jobs:
     needs: [publish, config-deploy]
 
     # do not build or deploy on forked repositories
-    if: github.repository_owner == 'EnricoMi'
+    if: ${{ (github.repository_owner == 'EnricoMi') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     steps:
       - name: Docker meta
@@ -172,6 +174,7 @@ jobs:
           DOCKER_BUILD_RECORD_UPLOAD: false
 
   event_file:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "Event File"
     runs-on: ubuntu-latest
     steps:
