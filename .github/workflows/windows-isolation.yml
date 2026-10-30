@@ -1,0 +1,65 @@
+name: Windows publisher isolation
+on:
+  pull_request:
+    paths: ['windows/**', 'python/requirements*.txt', '.github/workflows/windows-isolation.yml']
+  push:
+    branches: [master, fix/windows-isolated-python]
+    paths: ['windows/**', 'python/requirements*.txt', '.github/workflows/windows-isolation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  windows-isolation:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test environment preparation and failures
+        shell: pwsh
+        run: ./windows/Test-PublisherPython.ps1
+      - name: Select clean base interpreter and synthetic result
+        shell: pwsh
+        run: |
+          $clean = Join-Path $env:RUNNER_TEMP 'publisher-clean-base'
+          python -m venv $clean
+          if ($LASTEXITCODE -ne 0) { throw 'Clean interpreter setup failed.' }
+          $scripts = Join-Path $clean 'Scripts'
+          Copy-Item "$scripts/python.exe" "$scripts/python3.exe"
+          $scripts | Out-File $env:GITHUB_PATH -Append
+          & "$scripts/python.exe" -c "import importlib.util; assert importlib.util.find_spec('github') is None"
+          if ($LASTEXITCODE -ne 0) { throw 'Base Python already contains PyGithub.' }
+          '<testsuite name="isolated-publisher" tests="1" failures="0" errors="0" skipped="0"><testcase classname="PublisherSmoke" name="CleanInterpreterPublishes" time="0.1"/></testsuite>' | Set-Content smoke.xml
+      - name: Publish real check and summary from clean Python
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        id: publish
+        uses: ./windows
+        with:
+          files: smoke.xml
+          check_name: Windows isolated publisher smoke
+          comment_mode: 'off'
+          compare_to_earlier_commit: false
+          action_fail: true
+          action_fail_on_inconclusive: true
+          json_file: smoke-result.json
+          job_summary: true
+      - name: Verify publisher output and global isolation
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: pwsh
+        env:
+          PUBLISH_JSON: ${{ steps.publish.outputs.json }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if (-not (Test-Path smoke-result.json)) { throw 'Publisher did not produce JSON.' }
+          $result = Get-Content smoke-result.json -Raw | ConvertFrom-Json
+          if ($result.stats.tests -ne 1 -or $result.stats.tests_succ -ne 1 -or $result.stats.tests_fail -ne 0) { throw 'Published counts differ from the fixture.' }
+          if (-not $env:PUBLISH_JSON) { throw 'Action JSON output is missing.' }
+          $name = [uri]::EscapeDataString('Windows isolated publisher smoke')
+          $checks = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/commits/$env:GITHUB_SHA/check-runs?check_name=$name" -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json' }
+          $published = @($checks.check_runs | Where-Object { $_.name -eq 'Windows isolated publisher smoke' -and $_.conclusion -eq 'success' -and $_.output.summary })
+          if ($published.Count -ne 1) { throw 'Real successful check with summary was not found.' }
+          python3 -c "import importlib.util; assert importlib.util.find_spec('github') is None"
+          if ($LASTEXITCODE -ne 0) { throw 'Publisher installed dependencies in the base interpreter.' }
