@@ -7,7 +7,6 @@ on:
       - python/**
       - .github/workflows/windows-bootstrap.yml
   push:
-    branches: [master]
     paths:
       - windows/**
       - python/**
