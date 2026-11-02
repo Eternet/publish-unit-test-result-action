@@ -197,12 +197,22 @@ runs:
         }
       shell: pwsh
 
+    - name: Install Python dependencies
+      run: |
+        & "$env:GITHUB_ACTION_PATH\setup-python.ps1" `
+          -PythonBinary $env:PYTHON_BIN `
+          -RequirementsFile "$env:GITHUB_ACTION_PATH\..\python\requirements-$env:DEPENDENCIES_VERSION.txt" `
+          -TempRoot $env:RUNNER_TEMP `
+          -GitHubEnvFile $env:GITHUB_ENV
+      shell: pwsh
+
     - name: Publish Test Results
       id: test-results
       run: |
         Write-Output "::group::Publish Test Results"
         try {
-          Invoke-Expression -Command "& '$env:PYTHON_BIN' '$env:GITHUB_ACTION_PATH\..\python\publish_test_results.py'"
+          & $env:PYTHON_VENV "$env:GITHUB_ACTION_PATH\..\python\publish_test_results.py"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         } finally {
           Write-Output "::endgroup::"
         }

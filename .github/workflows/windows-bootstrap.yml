@@ -1,0 +1,54 @@
+name: Windows publisher bootstrap
+
+on:
+  pull_request:
+    paths:
+      - windows/**
+      - python/**
+      - .github/workflows/windows-bootstrap.yml
+  push:
+    branches: [master]
+    paths:
+      - windows/**
+      - python/**
+      - .github/workflows/windows-bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Reproduce and test isolated bootstrap and native failures
+        shell: pwsh
+        run: ./windows/test-setup-python.ps1 -PythonBinary (python -c 'import sys; print(sys.executable)')
+      - name: Create a report for the real composite action
+        shell: pwsh
+        run: |
+          '<testsuite name="bootstrap" tests="2" failures="0" errors="0"><testcase name="first"/><testcase name="second"/></testsuite>' | Set-Content bootstrap-results.xml
+      - name: Publish through the actual Windows action
+        id: publish
+        uses: ./windows
+        with:
+          files: bootstrap-results.xml
+          check_run: false
+          comment_mode: 'off'
+          compare_to_earlier_commit: false
+          json_file: bootstrap-results.json
+      - name: Verify the published report
+        shell: pwsh
+        run: |
+          $result = Get-Content bootstrap-results.json -Raw | ConvertFrom-Json
+          if ($result.stats.tests -ne 2 -or $result.stats.tests_succ -ne 2 -or $result.stats.tests_fail -ne 0) {
+            throw 'The actual Windows publisher did not preserve the two passing results.'
+          }

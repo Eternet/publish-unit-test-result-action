@@ -857,6 +857,11 @@ Self-hosted runners may require setting up a Python environment first:
 
 Start-up of the action is faster with `virtualenv` or `venv` package installed.
 
+The Eternet Windows variant creates a separate `venv` under `RUNNER_TEMP` with the selected
+Python interpreter and installs the action's pinned requirements before publishing. The runner
+does not need preinstalled publisher packages. A failed environment setup or dependency install
+fails the action; it does not fall back to the runner's global Python or silently skip reporting.
+
 ## Running as a composite action
 
 Running this action via:
