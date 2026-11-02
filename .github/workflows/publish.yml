@@ -5,8 +5,20 @@ on:
 
 jobs:
   publish-dockerfile:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Results (Dockerfile)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     permissions:
       checks: write
       pull-requests: write
@@ -44,8 +56,20 @@ jobs:
           json_file: 'tests.json'
 
   publish-docker-image:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Results (Docker Image ${{ matrix.arch }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     permissions:
       checks: write
       pull-requests: write
@@ -221,8 +245,20 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
 
   publish-linux:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Results (${{ matrix.os-label }} python ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux]
     permissions:
       checks: write
       pull-requests: write
@@ -353,8 +389,20 @@ jobs:
           json_file: 'tests.json'
 
   publish-windows:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Results (${{ matrix.os-label }} python ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Windows]
     permissions:
       checks: write
       pull-requests: write
@@ -431,8 +479,25 @@ jobs:
           json_file: 'tests.json'
 
   publish-composite:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Results (${{ matrix.os-label }} composite)
-    runs-on: ${{ matrix.os }}
+    runs-on: >-
+      ${{
+        startsWith(matrix.os, 'windows-') && fromJSON('["self-hosted","Windows"]')
+        || startsWith(matrix.os, 'ubuntu-') && fromJSON('["self-hosted","Linux"]')
+        || matrix.os
+      }}
     permissions:
       checks: write
       pull-requests: write
@@ -480,8 +545,20 @@ jobs:
           json_file: 'tests.json'
 
   publish-test-files:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test Files
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     permissions:
       checks: write
       pull-requests: write
@@ -526,8 +603,20 @@ jobs:
           json_file: 'tests.json'
 
   publish-test-file:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Publish Test File
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     permissions:
       checks: write
       pull-requests: write

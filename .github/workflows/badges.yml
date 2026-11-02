@@ -9,8 +9,20 @@ permissions: {}
 
 jobs:
   downloads:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Docker pulls
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
 
     steps:
       - name: Checkout
@@ -51,8 +63,20 @@ jobs:
           file: downloads.json
 
   workflows:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Dependent workflows
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     permissions:
       packages: read
 
