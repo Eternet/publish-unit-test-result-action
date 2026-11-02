@@ -15,8 +15,20 @@ permissions: {}
 
 jobs:
   dependencies:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: Test python/requirements.txt
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -83,8 +95,20 @@ jobs:
     name: Configure Deployment
     needs: [test-mac, test-lnx, test-win]
     # do not build or deploy on forked repositories
-    if: github.repository_owner == 'EnricoMi'
-    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        (github.repository_owner == 'EnricoMi')
+        && (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
+    runs-on: [self-hosted, Linux]
     outputs:
       image: ${{ steps.action.outputs.image }}
       image-exists: ${{ steps.image.outputs.exists }}
@@ -121,8 +145,20 @@ jobs:
     needs: [publish, config-deploy]
 
     # do not build or deploy on forked repositories
-    if: github.repository_owner == 'EnricoMi'
-    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        (github.repository_owner == 'EnricoMi')
+        && (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Docker meta
         id: docker-meta
@@ -172,8 +208,20 @@ jobs:
           DOCKER_BUILD_RECORD_UPLOAD: false
 
   event_file:
+    if: >-
+      ${{
+        (
+          !contains(fromJSON('["pull_request","pull_request_target"]'), github.event_name)
+          || github.event.pull_request.head.repo.full_name == github.repository
+          || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
+        )
+        && (
+          github.event_name != 'workflow_run'
+          || github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
     name: "Event File"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Upload
         uses: actions/upload-artifact@v4
