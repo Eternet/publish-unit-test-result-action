@@ -34,10 +34,19 @@ jobs:
       - name: Create a report for the real composite action
         shell: pwsh
         run: |
+          $clean = Join-Path $env:RUNNER_TEMP 'canonical-clean-python'
+          python -m venv --without-pip $clean
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot prepare the clean interpreter.' }
+          Copy-Item "$clean/Scripts/python.exe" "$clean/Scripts/python3.exe"
+          "$clean/Scripts" | Out-File $env:GITHUB_PATH -Append
+          & "$clean/Scripts/python.exe" -c 'import importlib.util; assert importlib.util.find_spec("github") is None'
+          if ($LASTEXITCODE -ne 0) { throw 'The selected interpreter already has publisher dependencies.' }
           '<testsuite name="bootstrap" tests="2" failures="0" errors="0"><testcase name="first"/><testcase name="second"/></testsuite>' | Set-Content bootstrap-results.xml
-      - name: Publish through the actual Windows action
+      - name: Publish through the canonical Windows Bash action
         id: publish
-        uses: ./windows
+        uses: Eternet/publish-unit-test-result-action/windows/bash@8e4fba0549801b6bf00986ede322acebf198625a
+        env:
+          PIP_REQUIRE_VIRTUALENV: 'true'
         with:
           files: bootstrap-results.xml
           check_run: false
@@ -51,3 +60,7 @@ jobs:
           if ($result.stats.tests -ne 2 -or $result.stats.tests_succ -ne 2 -or $result.stats.tests_fail -ne 0) {
             throw 'The actual Windows publisher did not preserve the two passing results.'
           }
+          & $env:PYTHON_VENV -c 'import sys, github; assert sys.prefix != sys.base_prefix'
+          if ($LASTEXITCODE -ne 0) { throw 'The publisher did not use an isolated Python environment.' }
+          python3 -c 'import importlib.util; assert importlib.util.find_spec("github") is None'
+          if ($LASTEXITCODE -ne 0) { throw 'The selected interpreter was changed by the publisher.' }
