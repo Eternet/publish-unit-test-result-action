@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ['windows/**', 'python/requirements*.txt', '.github/workflows/windows-isolation.yml']
   push:
-    branches: [master, fix/windows-isolated-python]
+    branches: [master]
     paths: ['windows/**', 'python/requirements*.txt', '.github/workflows/windows-isolation.yml']
   workflow_dispatch:
 permissions:
@@ -11,13 +11,14 @@ permissions:
   checks: write
 jobs:
   windows-isolation:
-    runs-on: windows-2025
+    # Fork pull requests never run on the shared self-hosted runners; they run after merge.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Windows]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          persist-credentials: false
       - name: Test environment preparation and failures
         shell: pwsh
         run: ./windows/Test-PublisherPython.ps1
