@@ -197,12 +197,20 @@ runs:
         }
       shell: pwsh
 
+    - name: Prepare isolated publisher environment
+      shell: pwsh
+      run: |
+        . "$env:GITHUB_ACTION_PATH/Prepare-PublisherPython.ps1"
+        $python = New-PublisherPythonEnvironment -PythonBin $env:PYTHON_BIN -RequirementsPath "$env:GITHUB_ACTION_PATH/../python/requirements-$env:DEPENDENCIES_VERSION.txt" -RunnerTemp $env:RUNNER_TEMP
+        "PYTHON_VENV=$python" | Out-File -FilePath $env:GITHUB_ENV -Append
+
     - name: Publish Test Results
       id: test-results
       run: |
         Write-Output "::group::Publish Test Results"
         try {
-          Invoke-Expression -Command "& '$env:PYTHON_BIN' '$env:GITHUB_ACTION_PATH\..\python\publish_test_results.py'"
+          & $env:PYTHON_VENV "$env:GITHUB_ACTION_PATH/../python/publish_test_results.py"
+          if ($LASTEXITCODE -ne 0) { throw "Publishing test results failed (exit $LASTEXITCODE)." }
         } finally {
           Write-Output "::endgroup::"
         }
