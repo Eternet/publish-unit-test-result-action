@@ -202,6 +202,8 @@ runs:
       run: |
         . "$env:GITHUB_ACTION_PATH/Prepare-PublisherPython.ps1"
         $python = New-PublisherPythonEnvironment -PythonBin $env:PYTHON_BIN -RequirementsPath "$env:GITHUB_ACTION_PATH/../python/requirements-$env:DEPENDENCIES_VERSION.txt" -RunnerTemp $env:RUNNER_TEMP
+        # A failed verification of a stale cached environment leaves a non-zero $LASTEXITCODE that would fail this step
+        $global:LASTEXITCODE = 0
         "PYTHON_VENV=$python" | Out-File -FilePath $env:GITHUB_ENV -Append
 
     - name: Publish Test Results
